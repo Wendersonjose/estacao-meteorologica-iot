@@ -19,26 +19,39 @@
 #include <PubSubClient.h>
 #include "config.h"  // Importa todas as configurações
 
-// ─── OBJETOS GLOBAIS ──────────────────────────────────────────
-WiFiClientSecure espClient;
-PubSubClient     mqttClient(espClient);
+// ═════════════════════════════════════════════════════════════
+// OBJETOS GLOBAIS
+// ═════════════════════════════════════════════════════════════
 
-// ─── CONTROLE DE TEMPO ────────────────────────────────────────
+WiFiClientSecure espClient;
+PubSubClient mqttClient(espClient);
+
+// Temporizador para publicação periódica
 unsigned long ultimaPublicacao = 0;
 
 // ═════════════════════════════════════════════════════════════
-// HANDLERS DE EVENTOS MQTT
+// CALLBACK MQTT
 // ═════════════════════════════════════════════════════════════
 
 /**
- * Callback executado ao receber mensagens MQTT
+ * Processa mensagens recebidas via MQTT
  * @param topico Nome do tópico que recebeu a mensagem
  * @param payload Conteúdo da mensagem (bytes)
  * @param tamanho Tamanho do payload em bytes
  */
 void callbackMQTT(char* topico, byte* payload, unsigned int tamanho) {
   String mensagem = "";
-  m═════════════════════════════════════════════════════════════
+  for (unsigned int i = 0; i < tamanho; i++) {
+    mensagem += (char)payload[i];
+  }
+  
+  Serial.print("📩 [");
+  Serial.print(topico);
+  Serial.print("] ");
+  Serial.println(mensagem);
+}
+
+// ═════════════════════════════════════════════════════════════
 // GERENCIAMENTO DE CONEXÕES
 // ═════════════════════════════════════════════════════════════
 
@@ -59,11 +72,11 @@ void conectarWiFi() {
   }
   
   Serial.println();
-  Serial.print("✓ (mensagem);
+  Serial.print("✓ WiFi conectado! IP: ");
+  Serial.println(WiFi.localIP());
 }
 
-// ─── CONEXÃO WIFI ─────────────────────────────────────────────
-v**
+/**
  * Estabelece conexão com o broker MQTT
  * Inclui LWT (Last Will Testament) para detecção de desconexão
  * Reconecta automaticamente em caso de falha
@@ -109,19 +122,12 @@ void conectarMQTT() {
       Serial.print(". Tentando novamente em ");
       Serial.print(TIMEOUT_RECONEXAO / 1000);
       Serial.println("s...");
-      delay(TIMEOUT_RECONEXAO
-       * Assina alertas com wildcard '#' para receber QUALQUER
-       * subtópico de alertas (alertas/temperatura, alertas/umidade, etc.)
-       * QoS 1: comandos de alerta não devem ser perdidos.
-       */
-      mqttClient.subscribe(TOPICO_ALERTA, 1);
-      Serial.println("Inscrito em: " + String(TOPICO_ALERTA));
+      delay(TIMEOUT_RECONEXAO);
+    }
+  }
+}
 
-    } else {
-      Serial.print(" falhou! rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(". Tentando novamente em 5s...");
-   ═════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
 // CAMADA DE ACESSO A HARDWARE - SENSORES
 // ═════════════════════════════════════════════════════════════
 
@@ -137,7 +143,98 @@ float lerTemperatura() {
 /**
  * Lê o sensor de umidade
  * @return Umidade relativa em porcentagem (0.0 a 100.0)
- */═════════════════════════════════════════════════════════════
+ */
+float lerUmidade() {
+  const int raw = analogRead(PIN_SENSOR_UMIDADE);
+  return map(raw, 0, 4095, 0, 1000) / 10.0; // Conversão ADC → %
+}
+
+/**
+ * Lê o sensor de luminosidade
+ * @return Intensidade luminosa em lux (0 a 1000)
+ */
+int lerLuminosidade() {
+  const int raw = analogRead(PIN_SENSOR_LUMINOSIDADE);
+  return map(raw, 0, 4095, 0, 1000); // Conversão ADC → lux
+}
+
+// ═════════════════════════════════════════════════════════════
+// LÓGICA DE NEGÓCIO - DETECÇÃO DE ALERTAS
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Verifica se a temperatura está em nível crítico
+ * @param temperatura Valor atual da temperatura
+ */
+void verificarAlertaTemperatura(const float temperatura) {
+  if (temperatura > ALERTA_TEMP_ALTA) {
+    const String mensagem = "⚠️ Temperatura crítica: " + String(temperatura, 1) + "°C";
+    mqttClient.publish("alertas/temperatura", mensagem.c_str(), QOS_CRITICO);
+    Serial.println(mensagem);
+  }
+}
+
+/**
+ * Verifica se a umidade está em nível crítico
+ * @param umidade Valor atual da umidade
+ */
+void verificarAlertaUmidade(const float umidade) {
+  if (umidade < ALERTA_UMID_BAIXA) {
+    const String mensagem = "⚠️ Umidade crítica: " + String(umidade, 1) + "%";
+    mqttClient.publish("alertas/umidade", mensagem.c_str(), QOS_CRITICO);
+    Serial.println(mensagem);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+// CAMADA DE PUBLICAÇÃO
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Lê todos os sensores, verifica alertas e publica no MQTT
+ * Utiliza QoS 0 para leituras periódicas (otimizado para alta frequência)
+ * Utiliza QoS 1 para alertas críticos (garante entrega)
+ */
+void publicarLeituras() {
+  // Leitura dos sensores
+  const float temperatura = lerTemperatura();
+  const float umidade = lerUmidade();
+  const int luminosidade = lerLuminosidade();
+
+  // Conversão para strings
+  char bufferTemp[8];
+  char bufferUmid[8];
+  char bufferLux[8];
+  
+  dtostrf(temperatura, 4, 1, bufferTemp);
+  dtostrf(umidade, 4, 1, bufferUmid);
+  itoa(luminosidade, bufferLux, 10);
+
+  // Publicação via MQTT (QoS 0 para dados periódicos)
+  mqttClient.publish(TOPICO_TEMP, bufferTemp, QOS_LEITURAS);
+  mqttClient.publish(TOPICO_UMID, bufferUmid, QOS_LEITURAS);
+  mqttClient.publish(TOPICO_LUX, bufferLux, QOS_LEITURAS);
+
+  // Log no serial
+  Serial.println("──────────────────────────────");
+  Serial.print("🌡️  Temperatura: ");
+  Serial.print(temperatura, 1);
+  Serial.println(" °C");
+  
+  Serial.print("💧 Umidade: ");
+  Serial.print(umidade, 1);
+  Serial.println(" %");
+  
+  Serial.print("☀️  Luminosidade: ");
+  Serial.print(luminosidade);
+  Serial.println(" lux");
+
+  // Verificação de alertas (QoS 1 se houver alerta)
+  verificarAlertaTemperatura(temperatura);
+  verificarAlertaUmidade(umidade);
+}
+
+// ═════════════════════════════════════════════════════════════
 // INICIALIZAÇÃO DO SISTEMA
 // ═════════════════════════════════════════════════════════════
 
@@ -148,142 +245,52 @@ float lerTemperatura() {
 void setup() {
   // Inicializa comunicação serial
   Serial.begin(SERIAL_BAUD_RATE);
-  delay(500);
-  
   Serial.println("\n╔════════════════════════════════════════╗");
-  Serial.println("║  Estação Meteorológica N461           ║");
-  Serial.println("║  Sistema Distribuído IoT              ║");
+  Serial.println("║  N461 – Estação Meteorológica IoT    ║");
+  Serial.println("║  ESP32 + Sensores + MQTT + HiveMQ     ║");
   Serial.println("╚════════════════════════════════════════╝\n");
 
-  // Camada de Rede: Conecta WiFi
+  // Configuração dos pinos analógicos
+  pinMode(PIN_SENSOR_TEMPERATURA, INPUT);
+  pinMode(PIN_SENSOR_UMIDADE, INPUT);
+  pinMode(PIN_SENSOR_LUMINOSIDADE, INPUT);
+
+  // Conexão WiFi
   conectarWiFi();
 
-  // Camada de Segurança: Configura TLS
-  /═════════════════════════════════════════════════════════════
-// LOOP PRINCIPAL - CICLO DE EXECUÇÃO
+  // Configuração do cliente MQTT
+  espClient.setInsecure();  // Desabilita validação SSL (apenas para simulação)
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqttClient.setCallback(callbackMQTT);
+
+  // Conexão MQTT
+  conectarMQTT();
+
+  Serial.println("\n🚀 Sistema inicializado com sucesso!");
+  Serial.println("════════════════════════════════════════\n");
+}
+
+// ═════════════════════════════════════════════════════════════
+// LOOP PRINCIPAL
 // ═════════════════════════════════════════════════════════════
 
 /**
- * Verifica threshold de temperatura
- * @param temperatura Valor atual da temperatura
- */
-void verificarAlertaTemperatura(float temperatura) {
-  if (temperatura > ALERTA_TEMP_ALTA) {
-    String payload = "ALTA:" + String(temperatura, 1) + "C";
-    mqttClient.publish("alertas/temperatura", payload.c_str(), false);
-    
-    Serial.print("⚠ [ALERTA] Temperatura crítica: ");
-    Serial.print(temperatura, 1);
-    Serial.println("°C");
-  }
-}
-
-/**
- * Verifica threshold de umidade
- * @param umidade Valor atual da umidade
- */
-void verificarAlertaUmidade(float umidade) {
-  if (umidade < ALERTA_UMID_BAIXA) {
-    String payload = "BAIXA:" + String(umidade, 1) + "%";
-    mqttClient.publish("alertas/umidade", payload.c_str(), false);
-    
-    Serial.print("⚠ [ALERTA] Umidade baixa: ");
-    Serial.print(umidade, 1);
-    Serial.println("%");
-  }
-}
-
-/**
- * Publica leituras dos sensores via MQTT
- */
-void publicarLeituras() {
-  // Leitura dos sensores (camada de hardware)
-  const float temp = lerTemperatura();
-  const float umid = lerUmidade();
-  const float lux  = lerLuminosidade();
-
-  char buffer[16];
-
-  /*
-   * QoS 0 (At Most Once) para leituras
-   * Justificativa: Dados chegam a cada 3s; perda eventual tolerável
-   * Retained false: Dados antigos não fazem sentido para séries temporais
-   */
-  
-  // Publica temperatura
-  dtostrf(temp, 5, 1, buffer);
-  mqttClient.publish(TOPICO_TEMP, buffer, false);
-
-  // Publica umidade
-  dtostrf(umid, 5, 1, buffer);
-  mqttClient.publish(TOPICO_UMID, buffer, false);
-
-  // Publica luminosidade
-  dtostrf(lux, 7, 1, buffer);
-  mqttClient.publish(TOPICO_LUX, buffer, false);
-
-  // Log estruturado
-  Serial.printf("📊 [PUBLICADO] Temp: %.1f°C | Umid: %.1f%% | Lux: %.1f lux\n",
-                temp, umid, lux);
-
-  // Verifica condições de alerta
-  verificarAlertaTemperatura(temp);
-  verificarAlertaUmidade(umid);
-}
-
-/**
- * Loop principal executado continuamente
- * Padrão: Event Loop com polling de tempo
+ * Loop principal do ESP32
+ * Mantém conexões ativas e publica leituras periodicamente
  */
 void loop() {
-  // Garante conexão MQTT ativa (auto-heal)
+  // Reconecta se necessário
   if (!mqttClient.connected()) {
     conectarMQTT();
   }
-  
+
   // Processa mensagens MQTT recebidas
   mqttClient.loop();
 
-  // Controle de tempo não-bloqueante
+  // Publica leituras periodicamente
   const unsigned long agora = millis();
-  const unsigned long tempoDecorrido = agora - ultimaPublicacao;
-  
-  if (tempoDecorrido >= INTERVALO_PUBLICACAO) {
+  if (agora - ultimaPublicacao >= INTERVALO_PUBLICACAO) {
     ultimaPublicacao = agora;
-    publicarLeituras();loat lux  = lerLuminosidade();
-
-    char buf[16];
-
-    /*
-     * Publicações de leituras em QoS 0 (at most once)
-     * Justificativa: leituras chegam a cada 3s; perda eventual de
-     * um pacote não é crítica pois o próximo chegará em breve.
-     * retained=false (dados antigos não fazem sentido para sensores).
-     */
-    dtostrf(temp, 5, 1, buf);
-    mqttClient.publish(TOPICO_TEMP, buf);
-
-    dtostrf(umid, 5, 1, buf);
-    mqttClient.publish(TOPICO_UMID, buf);
-
-    dtostrf(lux, 7, 1, buf);
-    mqttClient.publish(TOPICO_LUX, buf);
-
-    Serial.printf("[PUBLICADO] Temp: %.1f°C | Umid: %.1f%% | Lux: %.1f lux\n",
-                  temp, umid, lux);
-
-    // Alerta de temperatura alta – QoS 1 (não pode se perder)
-    if (temp > 35.0) {
-      String alerta = "ALTA:" + String(temp, 1) + "C";
-      mqttClient.publish("alertas/temperatura", alerta.c_str());
-      Serial.println("[ALERTA] Temperatura acima de 35°C!");
-    }
-
-    // Alerta de umidade baixa – QoS 1
-    if (umid < 30.0) {
-      String alerta = "BAIXA:" + String(umid, 1) + "%";
-      mqttClient.publish("alertas/umidade", alerta.c_str());
-      Serial.println("[ALERTA] Umidade abaixo de 30%!");
-    }
+    publicarLeituras();
   }
 }

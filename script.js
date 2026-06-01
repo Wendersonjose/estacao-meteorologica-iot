@@ -308,7 +308,7 @@ const client = mqtt.connect(BROKER_URL, {
   username: MQTT_CONFIG.auth.username,
   password: MQTT_CONFIG.auth.password,
   clean: true,  // Sessão limpa: não reaproveita inscrições antigas
-  reconnectPeriod: MQTT_CONFIG.reconexaoMs
+  reconnectPeriod: UI_CONFIG.intervaloReconexao
 });
 
 // Evento disparado quando a dashboard conecta ao broker.
@@ -334,16 +334,16 @@ client.on('connect', () => {
    */
   
   // Sensores: QoS 0 (leituras frequentes)
-  client.subscribe(TOPICOS.sensores.temperatura, { qos: QOS.leituras });
-  client.subscribe(TOPICOS.sensores.umidade, { qos: QOS.leituras });
-  client.subscribe(TOPICOS.sensores.luminosidade, { qos: QOS.leituras });
+  client.subscribe(TOPICOS.sensores.temperatura, { qos: QOS.LEITURAS });
+  client.subscribe(TOPICOS.sensores.umidade, { qos: QOS.LEITURAS });
+  client.subscribe(TOPICOS.sensores.luminosidade, { qos: QOS.LEITURAS });
 
   // Status: QoS 1 (disponibilidade é crítica)
-  client.subscribe(TOPICOS.sensores.status, { qos: QOS.critico });
+  client.subscribe(TOPICOS.sensores.status, { qos: QOS.CRITICO });
 
   // Wildcards: Demonstração de padrões avançados
-  client.subscribe(TOPICOS.wildcards.bairros, { qos: QOS.leituras });
-  client.subscribe(TOPICOS.wildcards.alertas, { qos: QOS.critico });
+  client.subscribe(TOPICOS.wildcards.bairros, { qos: QOS.LEITURAS });
+  client.subscribe(TOPICOS.wildcards.todosAlertas, { qos: QOS.CRITICO });
 
   // Mostra no log quais topicos foram assinados.
   log('Inscrições: temperatura, umidade, luminosidade, status, alertas', 'info');
@@ -400,7 +400,7 @@ client.on('message', (topico, payload) => {
     document.getElementById('ts-temp').textContent = `Atualizado às ${hora}`;
     
     // Verifica alerta
-    if (valor > ALERTAS.temperaturaAlta) {
+    if (valor > ALERTAS.temperatura.alta) {
       log(`⚠ Temperatura crítica: ${valor.toFixed(1)}°C`, 'warn');
     }
     
@@ -422,7 +422,7 @@ client.on('message', (topico, payload) => {
     document.getElementById('ts-umid').textContent = `Atualizado às ${hora}`;
     
     // Verifica alerta
-    if (valor < ALERTAS.umidadeBaixa) {
+    if (valor < ALERTAS.umidade.baixa) {
       log(`⚠ Umidade baixa: ${valor.toFixed(1)}%`, 'warn');
     }
     
