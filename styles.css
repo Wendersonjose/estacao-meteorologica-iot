@@ -1,0 +1,335 @@
+:root {
+  /* Paleta e fontes usadas em toda a interface */
+  --bg:      #0a0f1e;
+  --panel:   #111827;
+  --border:  #1e2d45;
+  --accent:  #00d4ff;
+  --green:   #00ff9d;
+  --yellow:  #ffd166;
+  --red:     #ff4757;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+  --mono:    'Space Mono', monospace;
+  --sans:    'Outfit', sans-serif;
+}
+
+/* Reset basico para evitar espacamentos padrao do navegador */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+}
+
+/* Barra superior com titulo e status da conexao MQTT */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 212, 255, 0.03);
+}
+
+header h1 {
+  font-size: 1.1rem;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+header h1 span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+#status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+
+/* Bolinha que muda de cor conforme o broker conecta ou desconecta */
+#status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.4s;
+}
+
+#status-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+}
+
+#status-dot.offline {
+  background: var(--red);
+}
+
+/* Grade principal: tres colunas no desktop, reduzindo em telas menores */
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cartao base usado para leituras, grafico, alertas, publicacao e log */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Linha colorida no topo do cartao para identificar o tipo de informacao */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+.card.temp::before {
+  background: var(--red);
+}
+
+.card.umid::before {
+  background: var(--accent);
+}
+
+.card.lux::before {
+  background: var(--yellow);
+}
+
+.card.alert::before {
+  background: var(--red);
+}
+
+/* Rotulo pequeno acima do valor principal do cartao */
+.card-label {
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+/* Valor grande das leituras atuais */
+.card-value {
+  font-size: 2.8rem;
+  font-family: var(--mono);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-value .unit {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-left: 0.25rem;
+}
+
+.card-value.temp-val {
+  color: var(--red);
+}
+
+.card-value.umid-val {
+  color: var(--accent);
+}
+
+.card-value.lux-val {
+  color: var(--yellow);
+}
+
+.card-timestamp {
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  color: var(--muted);
+  margin-top: 0.75rem;
+}
+
+/* O grafico ocupa a largura total da grade em telas grandes */
+.chart-card {
+  grid-column: span 3;
+}
+
+@media (max-width: 900px) {
+  .chart-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .chart-card {
+    grid-column: span 1;
+  }
+}
+
+.chart-wrapper {
+  height: 220px;
+  position: relative;
+  margin-top: 1rem;
+}
+
+/* A lista de alertas fica ao lado do formulario de publicacao */
+.alert-card {
+  grid-column: span 2;
+}
+
+@media (max-width: 600px) {
+  .alert-card {
+    grid-column: span 1;
+  }
+}
+
+#alert-list {
+  list-style: none;
+  max-height: 140px;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+}
+
+#alert-list li {
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  color: var(--red);
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 71, 87, 0.15);
+}
+
+#alert-list li.empty {
+  color: var(--muted);
+}
+
+/* Formulario de publicacao manual de mensagens MQTT */
+.publish-card {
+  grid-column: span 1;
+}
+
+.pub-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.pub-row input,
+.pub-row select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.pub-row input:focus,
+.pub-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Campo aparece somente quando o usuario escolhe topico customizado */
+#pub-topic-custom {
+  display: none;
+}
+
+/* Botao usado para publicar mensagens no broker */
+.btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: var(--bg);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.6rem 1rem;
+  transition: opacity 0.2s;
+  width: 100%;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn:active {
+  opacity: 0.7;
+}
+
+/* Log ocupa uma linha completa para facilitar a leitura das mensagens */
+.log-card {
+  grid-column: span 3;
+}
+
+@media (max-width: 900px) {
+  .log-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .log-card {
+    grid-column: span 1;
+  }
+}
+
+#log {
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  color: var(--muted);
+  line-height: 1.6;
+  max-height: 130px;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+}
+
+#log span {
+  display: block;
+}
+
+#log .info {
+  color: var(--accent);
+}
+
+#log .warn {
+  color: var(--yellow);
+}
+
+#log .err {
+  color: var(--red);
+}

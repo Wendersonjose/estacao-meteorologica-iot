@@ -1,0 +1,8 @@
+# Assinar via linha de comando
+mosquitto_sub -h c3633a3d114d40f4958f2d72c4c7e86f.s1.eu.hivemq.cloud -p 8883 \
+  -u gabriel -P Gm302278 -t "clima/#" -v
+
+# Publicar via linha de comando
+mosquitto_pub -h c3633a3d114d40f4958f2d72c4c7e86f.s1.eu.hivemq.cloud -p 8883 \
+  -u SEU_USUARIO -P Gm302278 \
+  -t "alertas/temperatura" -m "TESTE:45.0C" -q 1

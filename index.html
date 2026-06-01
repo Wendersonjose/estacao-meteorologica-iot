@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <!-- Configuracoes basicas da pagina e responsividade -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estação Meteorológica - N461</title>
+
+  <!-- MQTT.js via WebSocket -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.0.5/mqtt.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <!-- Estilos do projeto -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Cabecalho com o nome do projeto e o estado da conexao MQTT -->
+<header>
+  <h1>ESTAÇÃO METEOROLÓGICA <span>/ N461</span></h1>
+  <div id="status-badge">
+    <div id="status-dot"></div>
+    <span id="status-text">desconectado</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Cards que exibem a ultima leitura recebida de cada sensor -->
+  <div class="card temp">
+    <div class="card-label">Temperatura</div>
+    <div class="card-value temp-val" id="val-temp">-<span class="unit">°C</span></div>
+    <div class="card-timestamp" id="ts-temp">aguardando dados...</div>
+  </div>
+
+  <div class="card umid">
+    <div class="card-label">Umidade</div>
+    <div class="card-value umid-val" id="val-umid">-<span class="unit">%</span></div>
+    <div class="card-timestamp" id="ts-umid">aguardando dados...</div>
+  </div>
+
+  <div class="card lux">
+    <div class="card-label">Luminosidade</div>
+    <div class="card-value lux-val" id="val-lux">-<span class="unit">lux</span></div>
+    <div class="card-timestamp" id="ts-lux">aguardando dados...</div>
+  </div>
+
+  <!-- Grafico atualizado em tempo real com as ultimas leituras MQTT -->
+  <div class="card chart-card">
+    <div class="card-label">Histórico em tempo real (últimas 30 leituras)</div>
+    <div class="chart-wrapper">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Lista os alertas publicados nos topicos alertas/# -->
+  <div class="card alert-card">
+    <div class="card-label">Alertas recebidos</div>
+    <ul id="alert-list">
+      <li class="empty">Nenhum alerta ainda.</li>
+    </ul>
+  </div>
+
+  <!-- Formulario para publicar comandos ou mensagens manualmente no broker -->
+  <div class="card publish-card">
+    <div class="card-label">Publicar comando</div>
+    <div class="pub-row">
+      <select id="pub-topic">
+        <option value="alertas/temperatura">alertas/temperatura</option>
+        <option value="alertas/umidade">alertas/umidade</option>
+        <option value="clima/uberlandia/centro/status">status do sensor</option>
+        <option value="custom">topico customizado...</option>
+      </select>
+      <input id="pub-topic-custom" type="text" placeholder="tópico customizado" />
+      <input id="pub-msg" type="text" placeholder="mensagem a publicar" value="TESTE" />
+      <button class="btn" onclick="publicar()">PUBLICAR</button>
+    </div>
+  </div>
+
+  <!-- Log simples para acompanhar conexao, mensagens recebidas e publicacoes -->
+  <div class="card log-card">
+    <div class="card-label">Log MQTT</div>
+    <div id="log"></div>
+  </div>
+
+</main>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS DA APLICAÇÃO                                        -->
+<!-- ============================================================ -->
+
+<!-- Configurações (DEVE vir primeiro) -->
+<script src="config.js"></script>
+
+<!-- Lógica da aplicação -->
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "author": "N461 – Estação Meteorológica",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 80,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_temp",
+      "top": -20,
+      "left": 220,
+      "attrs": { "label": "Temperatura" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_umid",
+      "top": 100,
+      "left": 220,
+      "attrs": { "label": "Umidade" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_lux",
+      "top": 220,
+      "left": 220,
+      "attrs": { "label": "Luminosidade" }
+    }
+  ],
+  "connections": [
+    ["esp:3V3",   "pot_temp:VCC", "red",    []],
+    ["esp:GND.1", "pot_temp:GND", "black",  []],
+    ["esp:IO34",  "pot_temp:SIG", "green",  []],
+
+    ["esp:3V3",   "pot_umid:VCC", "red",    []],
+    ["esp:GND.1", "pot_umid:GND", "black",  []],
+    ["esp:IO35",  "pot_umid:SIG", "blue",   []],
+
+    ["esp:3V3",   "pot_lux:VCC",  "red",    []],
+    ["esp:GND.1", "pot_lux:GND",  "black",  []],
+    ["esp:IO32",  "pot_lux:SIG",  "orange", []]
+  ],
+  "libraries": [
+    { "name": "PubSubClient", "version": "2.8" },
+    { "name": "ArduinoJson",  "version": "6.21.3" }
+  ]
+}
