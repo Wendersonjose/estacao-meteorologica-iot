@@ -4,7 +4,7 @@
 
 # Arquivos de configuração com credenciais
 config.h
-config.js
+# config.js  # Comentado para permitir deploy (credenciais visíveis no navegador de qualquer forma)
 .env
 .env.local
 .env.production
