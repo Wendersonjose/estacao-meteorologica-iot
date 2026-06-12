@@ -1,6 +1,6 @@
 /*
  * ============================================================
- *  N461 – Estação Meteorológica Distribuída
+ *   – Estação Meteorológica Distribuída
  *  Dispositivo Embarcado: ESP32 (simulado no Wokwi)
  *  
  *  Arquitetura: Separação de responsabilidades
@@ -246,7 +246,7 @@ void setup() {
   // Inicializa comunicação serial
   Serial.begin(SERIAL_BAUD_RATE);
   Serial.println("\n╔════════════════════════════════════════╗");
-  Serial.println("║  N461 – Estação Meteorológica IoT    ║");
+  Serial.println("║   – Estação Meteorológica IoT    ║");
   Serial.println("║  ESP32 + Sensores + MQTT + HiveMQ     ║");
   Serial.println("╚════════════════════════════════════════╝\n");
 

@@ -1,6 +1,6 @@
 # ☁ Estação Meteorológica Distribuída
 
-> Projeto V2 – N461 Sistemas Multimídia e Distribuídos
+> Projeto V2 – Sistemas Multimídia e Distribuídos
 
 Rede de sensores embarcados (ESP32 via Wokwi) que publica leituras de temperatura, umidade e luminosidade por MQTT em nuvem. Uma dashboard web consome os dados em tempo real, exibe gráficos e dispara alertas configuráveis.
 
@@ -8,10 +8,10 @@ Rede de sensores embarcados (ESP32 via Wokwi) que publica leituras de temperatur
 
 ## 👥 Integrantes
 
-| Nome completo | RA |
-|---|---|
-| NOME DO INTEGRANTE 1 | RA000001 |
-| NOME DO INTEGRANTE 2 | RA000002 |
+| Nome completo |
+|---|
+| Wenderson Jose da Silva |
+| Gabriel Moreira Freire |
 
 ---
 
@@ -238,23 +238,25 @@ vercel deploy
 
 **Netlify:** arraste a pasta do projeto para [app.netlify.com/drop](https://app.netlify.com/drop).
 
-**Resultado:** a aplicação ficará acessível em uma URL pública (ex.: `https://estacao-n461.vercel.app`).
+**Resultado:** a aplicação está acessível em: **https://estacao-meteorologica-iot.vercel.app/**
 
 ---
 
-## 📸 Capturas de Tela
+## 📸 Testes Documentados e Capturas de Tela
 
-> Adicione screenshots aqui após executar o projeto:
-> - Dashboard web com gráficos
-> - Serial Monitor do Wokwi mostrando publicações
-> - MQTT Explorer mostrando os tópicos
-> - Teste via mosquitto_pub / mosquitto_sub
+Os testes exigidos pelo requisito 3.2 estão documentados com logs reais em **[docs/testes-mqtt.md](docs/testes-mqtt.md)**:
+
+1. **`mosquitto_sub` (cliente local → nuvem):** assinatura de `clima/#` via TLS, recebendo a retained message do LWT;
+2. **`mosquitto_pub`/`mosquitto_sub` (QoS 1):** publicação de alerta em `alertas/temperatura` recebida pelo assinante de `alertas/#`;
+3. **Ponte Mosquitto local ↔ HiveMQ Cloud:** broker Mosquitto local (porta 1884) com bridge para a nuvem — mensagem publicada localmente entregue ao assinante na nuvem (configuração em [mosquitto-bridge.example.conf](mosquitto-bridge.example.conf)).
+
+> Screenshots adicionais (dashboard com gráficos, Serial Monitor do Wokwi, MQTT Explorer) podem ser adicionados em `docs/`.
 
 ---
 
 ## 🔗 Links
 
-- **Aplicação hospedada:** https://SEU-LINK.vercel.app
+- **Aplicação hospedada:** https://estacao-meteorologica-iot.vercel.app/
 - **Projeto Wokwi:** https://wokwi.com/projects/SEU-ID
 - **HiveMQ WebSocket Client (teste):** https://www.hivemq.com/demos/websocket-client/
 
@@ -262,10 +264,11 @@ vercel deploy
 
 ## 📋 Dificuldades Enfrentadas
 
-> Preencha durante o desenvolvimento:
-> - Configuração do TLS no ESP32 com WiFiClientSecure
-> - Ajuste do timeout de reconexão do PubSubClient
-> - etc.
+- **TLS no ESP32 (WiFiClientSecure):** o PubSubClient não valida certificados sozinho; foi necessário usar `WiFiClientSecure` e, na simulação, `setInsecure()` — em produção o correto seria embarcar o certificado raiz.
+- **Validação de certificado no Mosquitto/Windows:** o `--tls-use-os-certs` falhou (`certificate verify failed`) ao conectar no HiveMQ Cloud. Solução: baixar o certificado raiz ISRG Root X1 da Let's Encrypt e passar via `--cafile`.
+- **Ponte Mosquitto local ↔ nuvem instável no início:** a bridge desconectava logo após o `CONNECT`. Estabilizou após fixar `remote_clientid` e `bridge_protocol_version mqttv311` (detalhes em [docs/testes-mqtt.md](docs/testes-mqtt.md)).
+- **Credenciais em site estático:** a dashboard roda 100% no navegador, então as credenciais do broker ficam visíveis no código. Mitigação: usuário com permissões restritas no broker; a solução definitiva seria um backend proxy.
+- **Sincronização do gráfico:** as três leituras chegam em mensagens separadas; foi preciso agrupar os últimos valores e só plotar um ponto quando os três sensores reportaram (função `verificarGrafico()`).
 
 ---
 
